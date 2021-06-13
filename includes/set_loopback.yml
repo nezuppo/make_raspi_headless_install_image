@@ -1,0 +1,12 @@
+- name: Get loopback status
+  command: losetup -j {{unzipped_image.file_path}}
+  register: loopback_status
+
+- name: Attach loopback
+  when: loopback_status.stdout == ""
+  become: true
+  command: losetup -P -f {{unzipped_image.file_path}}
+
+- name: Get loopback device
+  command: losetup -l -n -O NAME -j {{unzipped_image.file_path}}
+  register: loopback_device

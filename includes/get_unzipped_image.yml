@@ -1,0 +1,26 @@
+- name: Get unzipped file state
+  get_one_file_path:
+    target_dir: "{{unzipped_dir}}"
+    check_extension: img
+  register: unzipped_image
+
+- name: Get zipped original image path
+  when: not unzipped_image.is_exist
+  get_one_file_path:
+    target_dir: "{{ansible_env.PWD}}/zipped-original-image"
+    check_extension: zip
+  register: original_zip
+  failed_when: not original_zip.is_exist
+
+- name: Unzip
+  when: not unzipped_image.is_exist
+  unarchive:
+    src: "{{original_zip.file_path}}"
+    dest: "{{unzipped_dir}}"
+
+- name: Get unzipped file state again
+  get_one_file_path:
+    target_dir: "{{unzipped_dir}}"
+    check_extension: img
+  register: unzipped_image
+  failed_when: not unzipped_image.is_exist

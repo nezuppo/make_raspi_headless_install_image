@@ -1,0 +1,64 @@
+- hosts: local
+  connection: local
+  vars:
+    - work_dir:     "{{ansible_env.PWD}}/tmp"
+    - unzipped_dir: "{{work_dir}}/unzipped"
+
+    - mount_boot:   "{{work_dir}}/mnt_boot"
+    - mount_root:   "{{work_dir}}/mnt_root"
+
+    - partitions_info:
+        - {partition: p1, mount_point: "{{mount_boot}}", fstype: vfat}
+        - {partition: p2, mount_point: "{{mount_root}}", fstype: ext4}
+  tasks:
+    - name: Create directories
+      file:
+        path: "{{item}}"
+        state: directory
+      loop:
+        - "{{unzipped_dir}}"
+        - "{{mount_boot}}"
+        - "{{mount_root}}"
+
+    - include: includes/get_unzipped_image.yml
+    - include: includes/set_loopback.yml
+
+    - name: Put loopback info
+      debug:
+        var: loopback_device.stdout
+
+    - name: Mount partitions
+      become: true
+      mount:
+        src: "{{loopback_device.stdout}}{{item.partition}}"
+        path: "{{item.mount_point}}"
+        fstype: "{{item.fstype}}"
+        state: mounted
+      loop: "{{partitions_info}}"
+
+    - name: Put /boot/ssh
+      become: true
+      file:
+        path: "{{mount_boot}}/ssh"
+        state: touch
+
+    - name: Append info to files
+      become: true
+      blockinfile:
+        block: "{{lookup('file', '{{work_dir}}/{{item.info_file}}')}}"
+        path: "{{mount_root}}{{item.path}}"
+        backup: yes
+      loop:
+        - {info_file: wpa_supplicant_network, path: "/etc/wpa_supplicant/wpa_supplicant.conf"}
+        - {info_file: dhcpcd_wlan0,           path: "/etc/dhcpcd.conf"}
+
+    - name: Unmount partitions
+      become: true
+      mount:
+        path: "{{item.mount_point}}"
+        state: unmounted
+      loop: "{{partitions_info}}"
+
+    - name: Detach loopback
+      become: true
+      command: losetup -d "{{loopback_device.stdout}}"
