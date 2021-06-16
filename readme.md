@@ -7,12 +7,9 @@
 boot パーティション
 
 - ssh サービスが有効になるように ssh という名前の空ファイルを設置
+- 無線 LAN が有効になるように wpa_supplicant.conf ファイルを設置
 
 root パーティション
-
-- 無線 LAN が有効になるように ``etc/wpa_supplicant/wpa_supplicant.conf`` に SSID とパスワード関連のネットワーク情報を追記
-
-  - ラズパイ OS の仕様上、インストールイメージの boot パーティションに wpa_supplicant.conf を置けば ``etc/wpa_supplicant/wpa_supplicant.conf`` が置き換わる仕様となっているようですが、本スクリプトでは ansible が ``etc/wpa_supplicant/wpa_supplicant.conf`` を直接編集します。
 
 - 無線 LAN インターフェースに固定 IP アドレスが振られるように ``etc/dhcpcd.conf`` に無線 LAN インターフェスの IP アドレス関連の情報を追記
 
@@ -47,7 +44,7 @@ $ sudo apt install wpasupplicant
 
 <br/>
 
-``etc/wpa_supplicant/wpa_supplicant.conf`` に追記する内容が書かれた wpa_supplicant_network ファイルを用意
+wpa_supplicant.conf に追記する内容が書かれた wpa_supplicant_network ファイルを用意
 
 ```
 $ wpa_passphrase MY_SSID > tmp/wpa_supplicant_network

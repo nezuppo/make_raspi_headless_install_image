@@ -1,12 +1,14 @@
 - hosts: local
+  gather_facts: no
   connection: local
   vars:
-    - work_dir:     "{{ansible_env.PWD}}/tmp"
+    - work_dir:     "tmp"
     - unzipped_dir: "{{work_dir}}/unzipped"
 
     - mount_boot:   "{{work_dir}}/mnt_boot"
     - mount_root:   "{{work_dir}}/mnt_root"
 
+    - boot_wpa_supplicant: "{{mount_boot}}/wpa_supplicant.conf"
     - partitions_info:
         - {partition: p1, mount_point: "{{mount_boot}}", fstype: vfat}
         - {partition: p2, mount_point: "{{mount_root}}", fstype: ext4}
@@ -42,15 +44,26 @@
         path: "{{mount_boot}}/ssh"
         state: touch
 
+    - name: Get /boot/wpa_supplicant.conf from /etc/wpa_supplicant/
+      become: true
+      # コピー元のファイルが r-------- の場合は
+      # become しても copy モジュール使えないみたいなので
+      # cp コマンドでコピー
+      # 同様に template モジュールも使えないみたい
+      command: cp "{{mount_root}}/etc/wpa_supplicant/wpa_supplicant.conf" "{{boot_wpa_supplicant}}"
+
     - name: Append info to files
       become: true
       blockinfile:
         block: "{{lookup('file', '{{work_dir}}/{{item.info_file}}')}}"
-        path: "{{mount_root}}{{item.path}}"
-        backup: yes
+        path: "{{item.path}}"
+        backup: "{{item.backup}}"
       loop:
-        - {info_file: wpa_supplicant_network, path: "/etc/wpa_supplicant/wpa_supplicant.conf"}
-        - {info_file: dhcpcd_wlan0,           path: "/etc/dhcpcd.conf"}
+        # boot パーティションが vfat のためなのか、/boot/wpa_supplicant.conf のバックアップ作成が失敗するので
+        # バックアップはしない
+        # vfat 用の blockinfile がもしあればバックアップもできるかもしれないがそれほど重要ではないので未確認
+        - {info_file: wpa_supplicant_network, path: "{{boot_wpa_supplicant}}",        backup: no}
+        - {info_file: dhcpcd_wlan0,           path: "{{mount_root}}/etc/dhcpcd.conf", backup: yes}
 
     - name: Unmount partitions
       become: true

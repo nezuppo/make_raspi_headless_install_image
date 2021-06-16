@@ -7,7 +7,7 @@
 - name: Get zipped original image path
   when: not unzipped_image.is_exist
   get_one_file_path:
-    target_dir: "{{ansible_env.PWD}}/zipped-original-image"
+    target_dir: "zipped-original-image"
     check_extension: zip
   register: original_zip
   failed_when: not original_zip.is_exist
